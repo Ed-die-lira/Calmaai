@@ -16,14 +16,27 @@ if (process.env.NODE_ENV !== 'test') {
     } else {
       // Tentar inicializar com credenciais de serviço se disponíveis
       if (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
-        admin.initializeApp({
-          credential: admin.credential.cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
-          })
-        });
-        console.log('Firebase Admin SDK inicializado com credenciais completas');
+        try {
+          // Processar a chave privada corretamente
+          const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
+
+          admin.initializeApp({
+            credential: admin.credential.cert({
+              projectId: process.env.FIREBASE_PROJECT_ID,
+              clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+              privateKey: privateKey
+            })
+          });
+          console.log('Firebase Admin SDK inicializado com credenciais completas');
+        } catch (certError) {
+          console.error('Erro ao processar certificado Firebase:', certError);
+
+          // Tentar inicializar apenas com projectId como fallback
+          admin.initializeApp({
+            projectId: process.env.FIREBASE_PROJECT_ID
+          });
+          console.log('Firebase Admin SDK inicializado apenas com projectId (modo limitado)');
+        }
       } else {
         // Inicializar apenas com projectId (funciona em ambientes específicos)
         admin.initializeApp({
@@ -109,5 +122,6 @@ module.exports = {
   verifyFirebaseToken,
   generateToken
 };
+
 
 
