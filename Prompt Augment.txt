@@ -1,0 +1,208 @@
+**Prompt para Augment no VS Code: Desenvolvimento do MVP do Calma AI**
+
+**Objetivo**: Gerar código completo, funcional e bem comentado para o MVP de um aplicativo de bem-estar mental chamado "Calma AI", usando exclusivamente ferramentas gratuitas. O aplicativo deve incluir cinco funcionalidades principais: Meditações Personalizadas, Diário Emocional Inteligente, Exercícios de Respiração, Lembretes Inteligentes e Comunidade Moderada. O código deve ser desenvolvido em Flutter (frontend) e Node.js (backend), com integração de IA gratuita (Hugging Face) para personalização e moderação, e seguir boas práticas de programação para garantir modularidade, escalabilidade e facilidade de manutenção.
+
+**Contexto**:
+- **Aplicativo**: Calma AI, um app de bem-estar mental para jovens adultos (18-35 anos), com interface minimalista (cores azul claro, branco, verde suave).
+- **Funcionalidades do MVP**:
+  1. **Meditações Personalizadas**: Player de áudio com meditações (MP3 estáticos: calma.mp3, foco.mp3, sono.mp3). Usuários selecionam humor ("Ansioso", "Cansado", "Feliz"), e o backend sugere uma meditação usando Hugging Face.
+  2. **Diário Emocional Inteligente**: Campo para registrar texto, com análise de sentimentos (positivo/negativo/neutro) via Hugging Face. Exibir gráfico simples de humor.
+  3. **Exercícios de Respiração**: Animação circular (expande/retrai em 4s/6s) com narração (MP3 estático: respiracao.mp3).
+  4. **Lembretes Inteligentes**: Notificações para meditar ou registrar humor em horários fixos, configuráveis pelo usuário.
+  5. **Comunidade Moderada**: Fórum anônimo para posts, com moderação de conteúdo inadequado via Hugging Face.
+- **Restrições**: Usar apenas ferramentas gratuitas. Sem APIs pagas (ex.: OpenAI, ElevenLabs). Áudios e imagens serão fornecidos externamente (gerados com VoxWorker e Stable Diffusion, hospedados no backend).
+
+**Tecnologias e Ferramentas Gratuitas**:
+- **Frontend**: Flutter (Dart), cross-platform para iOS/Android.
+- **Backend**: Node.js com Express, hospedado no Render (free tier, 512 MB RAM).
+- **Banco de Dados**: MongoDB Atlas (free tier, 512 MB).
+- **Autenticação**: Firebase Auth (free tier, login via e-mail).
+- **Notificações**: OneSignal (free tier, até 10.000 usuários).
+- **IA Gratuita**: Hugging Face API (gratuita com chave de API):
+  - Modelo `distilbert-base-uncased-finetuned-sst-2-english` para análise de sentimentos (diário).
+  - Modelo `mistral-7b` para sugestões de meditações (baseadas em humor).
+  - Modelo `facebook/moderation` para filtrar conteúdo inadequado (comunidade).
+- **Áudio**: MP3 estáticos (calma.mp3, foco.mp3, sono.mp3, respiracao.mp3), hospedados no backend (Render).
+- **Imagens**: Fundos estáticos (background.jpg), hospedados no frontend (assets).
+- **Hospedagem**: Render (backend), Netlify (frontend estático, se necessário).
+
+**Estrutura do Projeto**:
+1. **Frontend (Flutter)**:
+   - Diretório: `/calma_ai_flutter`
+   - Estrutura:
+     - `/lib/screens`: Telas (home_screen.dart, meditation_screen.dart, diary_screen.dart, breathing_screen.dart, community_screen.dart).
+     - `/lib/widgets`: Componentes reutilizáveis (meditation_card.dart, audio_player.dart, mood_button.dart).
+     - `/lib/services`: Integração com backend, Firebase, OneSignal (api_service.dart, auth_service.dart, notification_service.dart).
+     - `/lib/models`: Modelos (meditation.dart, diary_entry.dart, post.dart).
+     - `/assets`: Imagens (background.jpg).
+   - Arquivo principal: `main.dart`.
+2. **Backend (Node.js)**:
+   - Diretório: `/calma_ai_backend`
+   - Estrutura:
+     - `/routes`: Rotas (meditation_routes.js, diary_routes.js, community_routes.js).
+     - `/models`: Esquemas MongoDB (user.js, diary_entry.js, post.js).
+     - `/services`: Integração com Hugging Face (huggingface_service.js).
+     - `/utils`: Funções auxiliares (moderation.js).
+     - `.env`: Variáveis de ambiente (MongoDB URI, Hugging Face API key).
+   - Arquivo principal: `server.js`.
+
+**Dependências**:
+- **Flutter (pubspec.yaml)**:
+  - `audioplayers: ^5.2.1` (player de áudio).
+  - `fl_chart: ^0.68.0` (gráficos para diário).
+  - `http: ^1.2.2` (chamadas ao backend).
+  - `firebase_auth: ^5.2.0` (autenticação).
+  - `onesignal_flutter: ^5.2.2` (notificações).
+- **Node.js (package.json)**:
+  - `express: ^4.19.2` (framework).
+  - `mongoose: ^8.6.3` (MongoDB).
+  - `axios: ^1.7.7` (chamadas à Hugging Face).
+  - `dotenv: ^16.4.5` (variáveis de ambiente).
+  - `jest: ^29.7.0` (testes).
+
+**Funcionalidades Detalhadas**:
+1. **Meditações Personalizadas**:
+   - **Frontend**: Tela (`meditation_screen.dart`) com carrossel de meditações (3 áudios fixos). Botões de humor ("Ansioso", "Cansado", "Feliz"). Player de áudio (`audioplayers`) para MP3 do backend. Fundo com imagem estática (background.jpg).
+   - **Backend**: Endpoint `/meditations` (GET) retorna lista de meditações (id, título, URL do MP3). Endpoint `/meditations/suggest` (POST) recebe humor (ex.: "Ansioso") and usa Hugging Face (mistral-7b) para sugerir meditação (ex.: calma.mp3).
+   - **IA**: Hugging Face mapeia humor para meditação (ex.: "Ansioso" → calma.mp3).
+2. **Diário Emocional Inteligente**:
+   - **Frontend**: Tela (`diary_screen.dart`) com campo de texto, botão "Salvar", gráfico de humor (`fl_chart`). Exibir análise de sentimentos (ex.: "Positivo").
+   - **Backend**: Endpoint `/diary` (POST) salva entrada (texto, data, sentimento) no MongoDB. Usa Hugging Face (distilbert) para classificar sentimento (positivo/negativo/neutro). Endpoint `/diary/history` (GET) retorna histórico para o gráfico.
+   - **IA**: Hugging Face analisa texto e retorna sentimento.
+3. **Exercícios de Respiração**:
+   - **Frontend**: Tela (`breathing_screen.dart`) com animação circular (usar `AnimationController`, 4s inspirar, 6s expirar). Reproduzir áudio fixo (respiracao.mp3) com `audioplayers`. Botão iniciar/parar.
+   - **Backend**: Endpoint `/breathing` (GET) retorna URL do áudio (respiracao.mp3).
+   - **IA**: Nenhuma (animação e áudio são estáticos).
+4. **Lembretes Inteligentes**:
+   - **Frontend**: Tela (`home_screen.dart`) com formulário para definir horários (ex.: "Meditar às 20h"). Notificações via `onesignal_flutter`.
+   - **Backend**: Endpoint `/reminders` (POST) salva horário no MongoDB. Endpoint `/reminders` (GET) retorna lembretes do usuário.
+   - **IA**: Nenhuma (horários fixos, sem predição devido a restrições gratuitas).
+5. **Comunidade Moderada**:
+   - **Frontend**: Tela (`community_screen.dart`) com lista de posts (título, texto) e formulário para criar post.
+   - **Backend**: Endpoint `/posts` (POST) cria post após moderação com Hugging Face (facebook/moderation). Endpoint `/posts` (GET) retorna posts aprovados. Salvar posts no MongoDB.
+   - **IA**: Hugging Face filtra conteúdo inadequado (ex.: linguagem ofensiva).
+
+**Instruções para o Código**:
+- **Boas Práticas**:
+  - Usar arquitetura MVC no Flutter (separar modelos, visualizações, controladores).
+  - Modularizar código (ex.: widgets reutilizáveis como `meditation_card.dart`).
+  - Adicionar comentários detalhados (ex.: "Função para carregar URL do áudio").
+  - Usar async/await para chamadas HTTP.
+  - Tratar erros (ex.: "Falha ao conectar com Hugging Face").
+- **Autenticação**:
+  - Implementar login com Firebase Auth (e-mail) em `auth_service.dart`.
+  - Proteger rotas do backend com middleware (verificar token JWT).
+- **Integração com Hugging Face**:
+  - Usar endpoint gratuito: `https://api-inference.huggingface.co/models`.
+  - Configurar chave de API no `.env` (ex.: `HF_API_KEY=xyz`).
+  - Exemplo de chamada (diário): Enviar texto para `distilbert-base-uncased-finetuned-sst-2-english` e receber sentimento.
+- **Hospedagem**:
+  - Frontend: Testar localmente com `flutter run`. Opcionalmente, hospedar site estático no Netlify.
+  - Backend: Hospedar no Render (instruções em README.md).
+- **Testes**:
+  - Frontend: Gerar testes unitários com `flutter test` (ex.: testar `api_service.dart`).
+  - Backend: Gerar testes com Jest (ex.: testar `/meditations`).
+  - Usar Selenium para testes de interface (ex.: fluxo de login).
+
+**Estrutura de Arquivos**:
+/calma_ai_flutter
+  /lib
+    /screens
+      home_screen.dart
+      meditation_screen.dart
+      diary_screen.dart
+      breathing_screen.dart
+      community_screen.dart
+    /widgets
+      meditation_card.dart
+      audio_player.dart
+      mood_button.dart
+    /services
+      api_service.dart
+      auth_service.dart
+      notification_service.dart
+    /models
+      meditation.dart
+      diary_entry.dart
+      post.dart
+    /assets
+      background.jpg
+    main.dart
+  pubspec.yaml
+/calma_ai_backend
+  /routes
+    meditation_routes.js
+    diary_routes.js
+    community_routes.js
+  /models
+    user.js
+    diary_entry.js
+    post.js
+  /services
+    huggingface_service.js
+  /utils
+    moderation.js
+  server.js
+  .env
+  package.json
+
+
+**Tarefas Específicas**:
+1. **Frontend (Flutter)**:
+   - `main.dart`: Inicializar app com Firebase Auth, configurar roteamento (MaterialApp) para telas.
+   - `home_screen.dart`: Exibir carrossel de meditações (ListView), botões de humor, formulário de lembretes.
+   - `meditation_screen.dart`: Player de áudio (`audioplayers`) com MP3 do backend, fundo (background.jpg), botão play/pause.
+   - `diary_screen.dart`: Campo de texto, botão "Salvar", gráfico de humor (`fl_chart`), chamada ao backend para análise de sentimentos.
+   - `breathing_screen.dart`: Animação circular (`AnimationController`), áudio (respiracao.mp3), botão iniciar/parar.
+   - `community_screen.dart`: Lista de posts (ListView), formulário para criar post, chamada ao backend.
+   - `api_service.dart`: Funções HTTP para conectar ao backend (GET/POST).
+   - `auth_service.dart`: Login/logout com Firebase Auth.
+   - `notification_service.dart`: Configurar OneSignal para lembretes.
+   - `meditation.dart`, `diary_entry.dart`, `post.dart`: Modelos de dados com JSON serialização.
+2. **Backend (Node.js)**:
+   - `server.js`: Configurar Express, conectar MongoDB Atlas, carregar rotas.
+   - `meditation_routes.js`: Endpoints `/meditations` (GET, lista de áudios), `/meditations/suggest` (POST, sugere meditação com Hugging Face).
+   - `diary_routes.js`: Endpoints `/diary` (POST, salva entrada e analisa sentimento), `/diary/history` (GET, retorna histórico).
+   - `community_routes.js`: Endpoints `/posts` (POST, cria post com moderação), `/posts` (GET, lista posts).
+   - `huggingface_service.js`: Funções para chamar Hugging Face (sugestões, análise, moderação).
+   - `moderation.js`: Filtrar posts com Hugging Face (facebook/moderation).
+   - `user.js`, `diary_entry.js`, `post.js`: Esquemas MongoDB.
+3. **Testes**:
+   - Frontend: Testes unitários para `api_service.dart` (ex.: testar chamada HTTP) e `meditation_screen.dart` (ex.: testar play/pause).
+   - Backend: Testes com Jest para `meditation_routes.js` (ex.: testar resposta 200) e `diary_routes.js` (ex.: testar análise de sentimentos).
+4. **Documentação**:
+   - Gerar `README.md` com instruções para:
+     - Configurar Flutter, Node.js, Firebase Auth, OneSignal.
+     - Obter chave gratuita da Hugging Face.
+     - Hospedar no Render (backend) e Netlify (frontend).
+     - Rodar localmente (`flutter run`, `node server.js`).
+
+**Saída Esperada**:
+- Código completo para cada arquivo listado, com comentários explicativos.
+- Estrutura de diretórios organizada, pronta para uso.
+- Instruções claras no `README.md` para configuração e deploy.
+- Testes unitários básicos para frontend e backend.
+- Sugestões para depuração (ex.: prompts para corrigir erros como "Null check operator used on a null value").
+
+**Prioridades**:
+- Simplicidade: Código mínimo, focado no MVP.
+- Modularidade: Componentes reutilizáveis (ex.: `meditation_card.dart` para carrossel).
+- Gratuito: Evitar qualquer dependência paga.
+- Manutenção: Comentários e organização para facilitar ajustes.
+
+**Exemplo de Subprompt para um Arquivo**:
+"Gerar código para `meditation_screen.dart` em Flutter. A tela deve exibir um player de áudio com `audioplayers` para reproduzir um MP3 do backend (ex.: calma.mp3), com fundo de imagem estática (background.jpg), título da meditação e botão play/pause. Usar async/await para carregar a URL do áudio via HTTP. Incluir comentários, tratar erros (ex.: 'Falha ao carregar áudio') e seguir arquitetura MVC."
+
+**Instruções Adicionais**:
+- Se o código gerado contiver erros, sugerir prompts de correção (ex.: "Corrigir erro: 'Null check operator used on a null value' em meditation_screen.dart").
+- Garantir compatibilidade com Flutter 3.x e Node.js 18.x.
+- Incluir variáveis de ambiente no `.env` (ex.: `MONGODB_URI`, `HF_API_KEY`).
+- Fornecer instruções para testar localmente e hospedar no Render/Netlify.
+
+**Finalização**:
+- Após gerar o código, sugerir próximos passos (ex.: testar com `flutter test`, hospedar no Render, adicionar novas funcionalidades).
+- Incluir um resumo no `README.md` com:
+  - Visão geral do projeto.
+  - Passos para configurar o ambiente.
+  - Comandos para rodar e testar.
+  - Links para documentação (ex.: Flutter, Hugging Face).
