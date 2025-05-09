@@ -9,11 +9,14 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 
+// Carrega .env apenas se existir (opcional para Render)
+dotenv.config({ path: '.env', silent: true });
+
 // Importar middleware de autenticação
 const { verifyToken, verifyFirebaseToken } = require('./utils/auth');
 
 // Carrega variáveis de ambiente
-const result = dotenv.config();
+//const result = dotenv.config();
 
 if (result.error) {
   console.error('Erro ao carregar o arquivo .env:', result.error);
