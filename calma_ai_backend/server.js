@@ -10,17 +10,20 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 
 // Carrega .env apenas se existir (opcional para Render)
-dotenv.config({ path: '.env', silent: true });
+let result;
+try {
+  result = dotenv.config({ path: '.env' });
+} catch (error) {
+  console.warn('Aviso: Erro ao carregar arquivo .env:', error.message);
+  result = { error: true };
+}
 
 // Importar middleware de autenticação
 const { verifyToken, verifyFirebaseToken } = require('./utils/auth');
 
-// Carrega variáveis de ambiente
-//const result = dotenv.config();
-
-if (result.error) {
-  console.error('Erro ao carregar o arquivo .env:', result.error);
-  process.exit(1);
+// Verificar se houve erro ao carregar o .env
+if (result && result.error && !process.env.PORT) {
+  console.warn('Aviso: Arquivo .env não encontrado ou com problemas. Usando variáveis de ambiente do sistema.');
 }
 
 console.log('Variáveis de ambiente carregadas:', {
@@ -77,10 +80,5 @@ app.listen(PORT, () => {
 });
 
 module.exports = app; // Para testes
-
-
-
-
-
 
 
