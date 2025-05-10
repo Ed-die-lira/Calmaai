@@ -1,6 +1,5 @@
 /**
- * Modelo para meditações
- * Representa uma meditação com título, descrição e URL do áudio
+ * Modelo para meditação
  */
 
 class Meditation {
@@ -9,6 +8,7 @@ class Meditation {
   final String description;
   final String audioUrl;
   final String duration;
+  final String category;
 
   Meditation({
     required this.id,
@@ -16,9 +16,9 @@ class Meditation {
     required this.description,
     required this.audioUrl,
     required this.duration,
+    required this.category,
   });
 
-  // Construtor a partir de JSON
   factory Meditation.fromJson(Map<String, dynamic> json) {
     return Meditation(
       id: json['id'],
@@ -26,17 +26,7 @@ class Meditation {
       description: json['description'],
       audioUrl: json['audioUrl'],
       duration: json['duration'],
+      category: json['category'] ?? '',
     );
-  }
-
-  // Converter para JSON
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'description': description,
-      'audioUrl': audioUrl,
-      'duration': duration,
-    };
   }
 }

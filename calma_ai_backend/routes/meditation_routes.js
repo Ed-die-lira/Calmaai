@@ -5,62 +5,126 @@
 
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 const { suggestMeditation } = require('../services/huggingface_service');
 
-// Lista de meditações disponíveis
-const meditations = [
-  {
-    id: 'calma',
-    title: 'Meditação para Calma',
-    description: 'Ideal para momentos de ansiedade e estresse',
-    audioUrl: '/static/Calma/calma.mp3',
-    duration: '10:00'
-  },
-  {
-    id: 'foco',
-    title: 'Meditação para Foco',
-    description: 'Ajuda a melhorar a concentração e produtividade',
-    audioUrl: '/static/Foco/foco.mp3',
-    duration: '8:30'
-  },
-  {
-    id: 'sono',
-    title: 'Meditação para Sono',
-    description: 'Auxilia no relaxamento para uma noite tranquila',
-    audioUrl: '/static/Sono/sono.mp3',
-    duration: '15:00'
-  },
-  {
-    id: 'Respiração',
-    title: 'Meditação para Respiração',
-    description: 'Auxilia no relaxamento, redução de ansiedade e estresse',
-    audioUrl: '/static/Sono/sono.mp3',
-    duration: '15:00'
+// Função para listar arquivos de áudio em uma pasta
+function getAudioFilesInFolder(folderName) {
+  const folderPath = path.join(__dirname, '..', 'static', folderName);
+
+  try {
+    if (!fs.existsSync(folderPath)) {
+      console.warn(`Pasta não encontrada: ${folderPath}`);
+      return [];
+    }
+
+    const files = fs.readdirSync(folderPath);
+    return files
+      .filter(file => file.endsWith('.mp3'))
+      .map(file => ({
+        id: `${folderName.toLowerCase()}_${file.replace('.mp3', '')}`,
+        title: `${file.replace('.mp3', '').replace(/_/g, ' ')}`,
+        description: `Meditação de ${folderName}`,
+        audioUrl: `/static/${folderName}/${file}`,
+        category: folderName.toLowerCase(),
+        duration: '10:00' // Duração padrão, idealmente seria calculada do arquivo
+      }));
+  } catch (error) {
+    console.error(`Erro ao listar arquivos em ${folderPath}:`, error);
+    return [];
   }
-];
+}
+
+// Listar todas as meditações disponíveis
+function getAllMeditations() {
+  // Categorias de meditação
+  const categories = ['Calma', 'Foco', 'Sono', 'Respiracao'];
+
+  // Obter arquivos de cada categoria
+  let allMeditations = [];
+
+  categories.forEach(category => {
+    const meditations = getAudioFilesInFolder(category);
+    allMeditations = [...allMeditations, ...meditations];
+  });
+
+  return allMeditations;
+}
 
 /**
  * @route GET /api/meditations
- * @desc Retorna lista de todas as meditações disponíveis
+ * @desc Lista todas as meditações disponíveis
  * @access Public
  */
 router.get('/', (req, res) => {
-  res.json(meditations);
+  try {
+    const meditations = getAllMeditations();
+
+    if (meditations.length === 0) {
+      return res.status(404).json({
+        message: 'Nenhuma meditação encontrada',
+        error: 'Verifique se os arquivos de áudio estão na pasta static'
+      });
+    }
+
+    res.json(meditations);
+  } catch (error) {
+    console.error('Erro ao listar meditações:', error);
+    res.status(500).json({ message: 'Erro ao listar meditações', error: error.message });
+  }
 });
 
 /**
- * @route GET /api/meditations/:id
- * @desc Retorna uma meditação específica pelo ID
+ * @route GET /api/meditations/categories
+ * @desc Lista todas as categorias de meditação
  * @access Public
  */
-router.get('/:id', (req, res) => {
-  const meditation = meditations.find(m => m.id === req.params.id);
+router.get('/categories', (req, res) => {
+  try {
+    const categories = ['Calma', 'Foco', 'Sono', 'Respiracao'];
 
-  if (!meditation) {
-    return res.status(404).json({ message: 'Meditação não encontrada' });
+    const categoriesWithCount = categories.map(category => {
+      const meditations = getAudioFilesInFolder(category);
+      return {
+        id: category.toLowerCase(),
+        name: category,
+        count: meditations.length,
+        meditations: meditations
+      };
+    });
+
+    res.json(categoriesWithCount);
+  } catch (error) {
+    console.error('Erro ao listar categorias:', error);
+    res.status(500).json({ message: 'Erro ao listar categorias', error: error.message });
   }
+});
 
-  res.json(meditation);
+/**
+ * @route GET /api/meditations/category/:category
+ * @desc Lista meditações de uma categoria específica
+ * @access Public
+ */
+router.get('/category/:category', (req, res) => {
+  try {
+    const { category } = req.params;
+    const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+
+    const meditations = getAudioFilesInFolder(categoryName);
+
+    if (meditations.length === 0) {
+      return res.status(404).json({
+        message: `Nenhuma meditação encontrada na categoria ${categoryName}`,
+        error: 'Verifique se os arquivos de áudio estão na pasta correta'
+      });
+    }
+
+    res.json(meditations);
+  } catch (error) {
+    console.error('Erro ao listar meditações por categoria:', error);
+    res.status(500).json({ message: 'Erro ao listar meditações por categoria', error: error.message });
+  }
 });
 
 /**
@@ -78,24 +142,44 @@ router.post('/suggest', async (req, res) => {
     }
 
     // Obter sugestão da Hugging Face
-    const suggestedFile = await suggestMeditation(mood);
+    const suggestedCategory = await suggestMeditation(mood);
 
-    // Encontrar a meditação correspondente
-    const suggestedId = suggestedFile.replace('.mp3', '');
-    const meditation = meditations.find(m => m.id === suggestedId);
-
-    if (!meditation) {
-      return res.status(404).json({ message: 'Meditação sugerida não encontrada' });
+    // Mapear categoria sugerida
+    let category;
+    if (suggestedCategory.includes('calma')) {
+      category = 'Calma';
+    } else if (suggestedCategory.includes('foco')) {
+      category = 'Foco';
+    } else if (suggestedCategory.includes('sono')) {
+      category = 'Sono';
+    } else {
+      category = 'Calma'; // Padrão
     }
+
+    // Obter meditações da categoria
+    const meditations = getAudioFilesInFolder(category);
+
+    if (meditations.length === 0) {
+      return res.status(404).json({
+        message: `Nenhuma meditação encontrada na categoria ${category}`,
+        error: 'Verifique se os arquivos de áudio estão na pasta correta'
+      });
+    }
+
+    // Selecionar uma meditação aleatória da categoria
+    const randomIndex = Math.floor(Math.random() * meditations.length);
+    const meditation = meditations[randomIndex];
 
     res.json({
       suggestion: meditation,
+      category: category,
       basedOn: mood
     });
   } catch (error) {
     console.error('Erro ao sugerir meditação:', error);
-    res.status(500).json({ message: 'Erro ao processar sugestão de meditação' });
+    res.status(500).json({ message: 'Erro ao sugerir meditação', error: error.message });
   }
 });
 
 module.exports = router;
+

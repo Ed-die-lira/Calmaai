@@ -14,33 +14,34 @@ class BreathingScreen extends StatefulWidget {
   State<BreathingScreen> createState() => _BreathingScreenState();
 }
 
-class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProviderStateMixin {
+class _BreathingScreenState extends State<BreathingScreen>
+    with SingleTickerProviderStateMixin {
   // Controlador de animação
   late AnimationController _animationController;
   late Animation<double> _animation;
-  
+
   // Player de áudio
   final AudioPlayer _audioPlayer = AudioPlayer();
-  
+
   // Estado do exercício
   bool _isPlaying = false;
   String _phaseText = 'Toque para iniciar';
-  
+
   // Duração das fases (em segundos)
   static const int _inhaleSeconds = 4;
   static const int _exhaleSeconds = 6;
   static const int _totalSeconds = _inhaleSeconds + _exhaleSeconds;
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     // Inicializar controlador de animação
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: _totalSeconds),
     );
-    
+
     // Criar animação
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -48,17 +49,17 @@ class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProv
         curve: Curves.easeInOut,
       ),
     );
-    
+
     // Ouvir mudanças na animação para atualizar texto
     _animationController.addListener(_updatePhaseText);
-    
+
     // Repetir animação
     _animationController.repeat();
-    
+
     // Pausar inicialmente
     _animationController.stop();
   }
-  
+
   @override
   void dispose() {
     // Liberar recursos
@@ -66,11 +67,11 @@ class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProv
     _audioPlayer.dispose();
     super.dispose();
   }
-  
+
   // Atualizar texto da fase
   void _updatePhaseText() {
     final progress = _animationController.value;
-    
+
     // Fase de inspiração (primeira metade do ciclo)
     if (progress < _inhaleSeconds / _totalSeconds) {
       if (_phaseText != 'Inspire...') {
@@ -78,7 +79,7 @@ class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProv
           _phaseText = 'Inspire...';
         });
       }
-    } 
+    }
     // Fase de expiração (segunda metade do ciclo)
     else {
       if (_phaseText != 'Expire...') {
@@ -88,33 +89,47 @@ class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProv
       }
     }
   }
-  
+
   // Iniciar ou pausar exercício
   Future<void> _toggleExercise() async {
     if (_isPlaying) {
       // Pausar
       _animationController.stop();
       await _audioPlayer.pause();
-      
+
       setState(() {
         _isPlaying = false;
-        _phaseText = 'Toque para continuar';
       });
     } else {
       // Iniciar
       _animationController.repeat();
-      
+
       // Reproduzir áudio
       try {
-        // URL do áudio (alterar para URL real em produção)
-        const audioUrl = 'http://localhost:3000/static/respiracao.mp3';
-        
+        // URL do áudio
+        final audioUrl = kReleaseMode
+            ? 'https://calmaai.onrender.com/static/respiracao.mp3' // URL de produção
+            : 'http://10.0.2.2:3000/static/respiracao.mp3'; // URL para emulador
+
         // Verificar se já está carregado
         final playerState = _audioPlayer.state;
-        
+
         if (playerState == PlayerState.stopped) {
-          // Carregar e reproduzir
-          await _audioPlayer.setSourceUrl(audioUrl);
+          // Tentar carregar e reproduzir
+          try {
+            await _audioPlayer.setSourceUrl(audioUrl);
+          } catch (e) {
+            print('Erro ao carregar áudio remoto: $e');
+
+            // Tentar usar áudio local como fallback
+            try {
+              await _audioPlayer.setAsset('assets/audio/respiracao.mp3');
+            } catch (assetError) {
+              print('Erro ao carregar áudio local: $assetError');
+              throw e; // Repassar erro original se o fallback falhar
+            }
+          }
+
           await _audioPlayer.resume();
         } else {
           // Apenas reproduzir
@@ -122,7 +137,7 @@ class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProv
         }
       } catch (e) {
         print('Erro ao reproduzir áudio: $e');
-        
+
         // Mostrar erro
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -133,18 +148,18 @@ class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProv
           );
         }
       }
-      
+
       setState(() {
         _isPlaying = true;
       });
     }
   }
-  
+
   // Reiniciar exercício
   void _resetExercise() {
     _animationController.reset();
     _audioPlayer.stop();
-    
+
     setState(() {
       _isPlaying = false;
       _phaseText = 'Toque para iniciar';
@@ -179,7 +194,7 @@ class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProv
                 ),
               ),
               const SizedBox(height: 40),
-              
+
               // Animação circular
               GestureDetector(
                 onTap: _toggleExercise,
@@ -189,20 +204,23 @@ class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProv
                     // Calcular tamanho do círculo
                     final progress = _animationController.value;
                     double size;
-                    
+
                     // Fase de inspiração (primeira metade do ciclo)
                     if (progress < _inhaleSeconds / _totalSeconds) {
                       // Mapear 0-0.4 para 100-200
-                      final normalizedProgress = progress / (_inhaleSeconds / _totalSeconds);
+                      final normalizedProgress =
+                          progress / (_inhaleSeconds / _totalSeconds);
                       size = 100 + normalizedProgress * 100;
-                    } 
+                    }
                     // Fase de expiração (segunda metade do ciclo)
                     else {
                       // Mapear 0.4-1.0 para 200-100
-                      final normalizedProgress = (progress - _inhaleSeconds / _totalSeconds) / (_exhaleSeconds / _totalSeconds);
+                      final normalizedProgress =
+                          (progress - _inhaleSeconds / _totalSeconds) /
+                              (_exhaleSeconds / _totalSeconds);
                       size = 200 - normalizedProgress * 100;
                     }
-                    
+
                     return Container(
                       width: size,
                       height: size,
@@ -236,7 +254,7 @@ class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProv
                 ),
               ),
               const SizedBox(height: 40),
-              
+
               // Instruções
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 32),
@@ -251,7 +269,7 @@ class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProv
                 ),
               ),
               const SizedBox(height: 40),
-              
+
               // Botões
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -267,7 +285,7 @@ class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProv
                     ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   // Botão de iniciar/pausar
                   ElevatedButton.icon(
                     onPressed: _toggleExercise,

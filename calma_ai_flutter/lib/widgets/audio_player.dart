@@ -10,13 +10,13 @@ import 'package:audioplayers/audioplayers.dart';
 class AudioPlayerWidget extends StatefulWidget {
   final String audioUrl;
   final String title;
-  
+
   const AudioPlayerWidget({
     Key? key,
     required this.audioUrl,
     required this.title,
   }) : super(key: key);
-  
+
   @override
   State<AudioPlayerWidget> createState() => _AudioPlayerWidgetState();
 }
@@ -27,38 +27,38 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   bool _isLoaded = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
-  
+
   @override
   void initState() {
     super.initState();
     _loadAudio();
-    
+
     // Ouvintes para atualizar estado
     _audioPlayer.onPlayerStateChanged.listen((state) {
       setState(() {
         _isPlaying = state == PlayerState.playing;
       });
     });
-    
+
     _audioPlayer.onDurationChanged.listen((newDuration) {
       setState(() {
         _duration = newDuration;
       });
     });
-    
+
     _audioPlayer.onPositionChanged.listen((newPosition) {
       setState(() {
         _position = newPosition;
       });
     });
   }
-  
+
   @override
   void dispose() {
     _audioPlayer.dispose();
     super.dispose();
   }
-  
+
   // Carregar áudio
   Future<void> _loadAudio() async {
     try {
@@ -69,12 +69,15 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       } else {
         // URL local (relativa ao servidor)
         final baseUrl = kReleaseMode
-            ? 'https://calma-ai-backend.onrender.com' // URL de produção
+            ? 'https://calmaai.onrender.com' // URL de produção
             : 'http://10.0.2.2:3000'; // URL para emulador Android
-        
-        await _audioPlayer.setSourceUrl('$baseUrl${widget.audioUrl}');
+
+        final fullUrl = '$baseUrl${widget.audioUrl}';
+        print('Carregando áudio de: $fullUrl');
+
+        await _audioPlayer.setSourceUrl(fullUrl);
       }
-      
+
       setState(() {
         _isLoaded = true;
       });
@@ -91,7 +94,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       }
     }
   }
-  
+
   // Reproduzir ou pausar áudio
   Future<void> _playPause() async {
     try {
@@ -104,7 +107,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       print('Erro ao reproduzir/pausar áudio: $e');
     }
   }
-  
+
   // Parar áudio
   Future<void> _stop() async {
     try {
@@ -113,7 +116,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       print('Erro ao parar áudio: $e');
     }
   }
-  
+
   // Formatar duração
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
@@ -136,7 +139,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
           ),
         ),
         const SizedBox(height: 20),
-        
+
         // Controles de reprodução
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -148,7 +151,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
               color: const Color(0xFF64B5F6),
               iconSize: 32,
             ),
-            
+
             // Botão de reproduzir/pausar
             Container(
               decoration: BoxDecoration(
@@ -157,9 +160,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
               ),
               child: IconButton(
                 icon: Icon(
-                  _isPlaying
-                      ? Icons.pause
-                      : Icons.play_arrow,
+                  _isPlaying ? Icons.pause : Icons.play_arrow,
                 ),
                 onPressed: _isLoaded ? _playPause : null,
                 color: Colors.white,
@@ -169,13 +170,13 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
           ],
         ),
         const SizedBox(height: 20),
-        
+
         // Barra de progresso
         Slider(
           value: _position.inSeconds.toDouble(),
           min: 0,
-          max: _duration.inSeconds.toDouble() > 0 
-              ? _duration.inSeconds.toDouble() 
+          max: _duration.inSeconds.toDouble() > 0
+              ? _duration.inSeconds.toDouble()
               : 1,
           activeColor: const Color(0xFF64B5F6),
           inactiveColor: Colors.grey[300],
@@ -184,7 +185,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             await _audioPlayer.seek(position);
           },
         ),
-        
+
         // Tempo atual / Duração total
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -200,6 +201,3 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     );
   }
 }
-
-
-
