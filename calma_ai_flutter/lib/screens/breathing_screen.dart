@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:audioplayers/audioplayers.dart';
 
 class BreathingScreen extends StatefulWidget {
@@ -117,13 +118,13 @@ class _BreathingScreenState extends State<BreathingScreen>
         if (playerState == PlayerState.stopped) {
           // Tentar carregar e reproduzir
           try {
-            await _audioPlayer.setSourceUrl(audioUrl);
+            await _audioPlayer.play(UrlSource(audioUrl));
           } catch (e) {
             print('Erro ao carregar áudio remoto: $e');
 
             // Tentar usar áudio local como fallback
             try {
-              await _audioPlayer.setAsset('assets/audio/respiracao.mp3');
+              await _audioPlayer.play(AssetSource('audio/respiracao.mp3'));
             } catch (assetError) {
               print('Erro ao carregar áudio local: $assetError');
               throw e; // Repassar erro original se o fallback falhar

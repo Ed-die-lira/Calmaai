@@ -107,12 +107,14 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
           } catch (localError) {
             print('Erro ao carregar áudio de localhost: $localError');
 
-            // Tentar usar áudio local como fallback final
-            final assetPath = 'assets/audio/${widget.audioUrl.split('/').last}';
-            print('Tentando carregar áudio do asset local: $assetPath');
-
-            await _audioPlayer.setAsset(assetPath);
-            print('Áudio carregado com sucesso do asset local');
+            // Tentar usar áudio local como fallback
+            try {
+              await _audioPlayer
+                  .play(AssetSource('audio/default_meditation.mp3'));
+            } catch (assetError) {
+              print('Erro ao carregar áudio local: $assetError');
+              throw e; // Repassar erro original se o fallback falhar
+            }
           }
         }
       }

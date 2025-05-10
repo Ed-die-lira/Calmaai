@@ -21,32 +21,33 @@ class CommunityScreen extends StatefulWidget {
   State<CommunityScreen> createState() => _CommunityScreenState();
 }
 
-class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProviderStateMixin {
+class _CommunityScreenState extends State<CommunityScreen>
+    with SingleTickerProviderStateMixin {
   // Controladores para o formulário
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
-  
+
   // Estado de carregamento
   bool _isLoading = true;
   bool _isSubmitting = false;
-  
+
   // Lista de posts
   List<Post> _posts = [];
-  
+
   // Controlador de abas
   late TabController _tabController;
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     // Inicializar controlador de abas
     _tabController = TabController(length: 2, vsync: this);
-    
+
     // Carregar posts
     _loadPosts();
   }
-  
+
   @override
   void dispose() {
     // Liberar recursos
@@ -55,24 +56,24 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
     _tabController.dispose();
     super.dispose();
   }
-  
+
   // Carregar posts da comunidade
   Future<void> _loadPosts() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       // Obter token de autenticação
       final authService = Provider.of<AuthService>(context, listen: false);
       final token = await authService.getToken();
-      
+
       // Criar instância do serviço de API
       final apiService = ApiService(token: token);
-      
+
       // Obter posts
       final posts = await apiService.getPosts();
-      
+
       setState(() {
         _posts = posts;
         _isLoading = false;
@@ -82,7 +83,7 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
       setState(() {
         _isLoading = false;
       });
-      
+
       // Mostrar erro
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -94,13 +95,13 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
       }
     }
   }
-  
+
   // Criar novo post
   Future<void> _createPost() async {
     // Validar formulário
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
-    
+
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -110,7 +111,7 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
       );
       return;
     }
-    
+
     if (content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -120,38 +121,39 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
       );
       return;
     }
-    
+
     setState(() {
       _isSubmitting = true;
     });
-    
+
     try {
       // Obter token e ID do usuário
       final authService = Provider.of<AuthService>(context, listen: false);
       final token = await authService.getToken();
       final userId = authService.user?.uid;
-      
+
       if (userId == null) {
         throw Exception('Usuário não autenticado');
       }
-      
+
       // Criar instância do serviço de API
       final apiService = ApiService(token: token);
-      
+
       // Criar post
-      await apiService.createPost(userId, title, content);
-      
+      await apiService.createPost(
+          userId: userId, title: title, content: content);
+
       // Limpar formulário
       _titleController.clear();
       _contentController.clear();
-      
+
       // Atualizar lista de posts
       await _loadPosts();
-      
+
       setState(() {
         _isSubmitting = false;
       });
-      
+
       // Mostrar confirmação
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -161,7 +163,7 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
           ),
         );
       }
-      
+
       // Mudar para a aba de posts
       _tabController.animateTo(0);
     } catch (e) {
@@ -169,7 +171,7 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
       setState(() {
         _isSubmitting = false;
       });
-      
+
       // Mostrar erro
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -200,14 +202,14 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
         children: [
           // Aba de posts
           _buildPostsTab(),
-          
+
           // Aba de novo post
           _buildNewPostTab(),
         ],
       ),
     );
   }
-  
+
   // Construir aba de posts
   Widget _buildPostsTab() {
     return _isLoading
@@ -265,7 +267,7 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              
+
                               // Data de criação
                               Text(
                                 post.formattedCreatedAt,
@@ -275,11 +277,11 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              
+
                               // Conteúdo do post
                               Text(post.content),
                               const SizedBox(height: 16),
-                              
+
                               // Botões de interação
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
@@ -289,23 +291,27 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
                                     icon: const Icon(Icons.favorite_border),
                                     onPressed: () {
                                       // Implementar curtida
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         const SnackBar(
-                                          content: Text('Funcionalidade em desenvolvimento'),
+                                          content: Text(
+                                              'Funcionalidade em desenvolvimento'),
                                           backgroundColor: Colors.orange,
                                         ),
                                       );
                                     },
                                   ),
-                                  
+
                                   // Botão de comentar
                                   IconButton(
                                     icon: const Icon(Icons.comment_outlined),
                                     onPressed: () {
                                       // Implementar comentário
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         const SnackBar(
-                                          content: Text('Funcionalidade em desenvolvimento'),
+                                          content: Text(
+                                              'Funcionalidade em desenvolvimento'),
                                           backgroundColor: Colors.orange,
                                         ),
                                       );
@@ -321,7 +327,7 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
                   ),
           );
   }
-  
+
   // Construir aba de novo post
   Widget _buildNewPostTab() {
     return SingleChildScrollView(
@@ -339,7 +345,7 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
             ),
           ),
           const SizedBox(height: 8),
-          
+
           // Descrição
           const Text(
             'Compartilhe suas experiências, dicas ou peça conselhos. '
@@ -350,7 +356,7 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Campo de título
           TextField(
             controller: _titleController,
@@ -362,7 +368,7 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
             maxLength: 100,
           ),
           const SizedBox(height: 16),
-          
+
           // Campo de conteúdo
           TextField(
             controller: _contentController,
@@ -375,7 +381,7 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
             maxLength: 1000,
           ),
           const SizedBox(height: 16),
-          
+
           // Botão de enviar
           SizedBox(
             width: double.infinity,
@@ -401,7 +407,7 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Aviso de moderação
           const Card(
             color: Color(0xFFE3F2FD),
