@@ -1,37 +1,25 @@
 import 'package:flutter/foundation.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_service.dart';
 
 class MockAuthService extends AuthService {
-  @override
-  User? get user => null;
+  MockAuthService() {
+    // Não podemos acessar diretamente as variáveis privadas da classe pai
+    // Vamos usar métodos protegidos ou públicos para configurar o estado
 
-  @override
-  bool get isAuthenticated => true;
-
-  @override
-  Future<String?> getToken() async {
-    return 'mock-token-for-testing';
+    // Simulando login bem-sucedido
+    loginWithEmailAndPassword('teste@exemplo.com', 'senha123');
   }
 
   @override
   Future<bool> loginWithEmailAndPassword(String email, String password) async {
-    // Simular login bem-sucedido
-    print('Mock login com: $email');
+    // Sempre retorna sucesso para testes
+    notifyListeners();
     return true;
   }
 
   @override
-  Future<bool> registerWithEmailAndPassword(
-      String email, String password) async {
-    // Simular registro bem-sucedido
-    print('Mock registro com: $email');
-    return true;
-  }
-
-  @override
-  Future<void> logout() async {
-    // Simular logout
-    print('Mock logout');
+  Future<String?> getToken() async {
+    // Sempre retorna um token de teste
+    return 'mock-token-for-testing-123456';
   }
 }

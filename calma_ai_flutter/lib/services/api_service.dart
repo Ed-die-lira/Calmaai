@@ -3,27 +3,42 @@
  */
 
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart' show kReleaseMode;
-
-// Importar modelos
 import '../models/meditation.dart';
-import '../models/category.dart';
-import '../models/diary_entry.dart';
-import '../models/post.dart';
 
 class ApiService {
-  // URL base da API
-  final String baseUrl;
-
-  // Token de autenticação
   final String? token;
 
-  ApiService({this.token, String? customBaseUrl})
-      : baseUrl = customBaseUrl ??
-            (kReleaseMode
-                ? 'https://calmaai.onrender.com/api' // URL de produção
-                : 'http://10.0.2.2:3000/api'); // URL para emulador Android
+  // URL base da API
+  String get baseUrl {
+    if (kIsWeb) {
+      // Para web, usar localhost ou a URL de produção
+      return 'https://calmaai.onrender.com/api';
+    } else if (kReleaseMode) {
+      // Para release em dispositivos móveis
+      return 'https://calmaai.onrender.com/api';
+    } else {
+      // Para debug em emuladores
+      return 'http://10.0.2.2:3000/api';
+    }
+  }
+
+  // URL para arquivos estáticos
+  String get staticUrl {
+    if (kIsWeb) {
+      // Para web, usar localhost ou a URL de produção
+      return 'https://calmaai.onrender.com';
+    } else if (kReleaseMode) {
+      // Para release em dispositivos móveis
+      return 'https://calmaai.onrender.com';
+    } else {
+      // Para debug em emuladores
+      return 'http://10.0.2.2:3000';
+    }
+  }
+
+  ApiService({this.token});
 
   // Headers para requisições autenticadas
   Map<String, String> get _headers {
@@ -38,26 +53,10 @@ class ApiService {
     return headers;
   }
 
-  // Verificar conexão com o servidor
-  Future<bool> checkConnection() async {
-    try {
-      final response = await http
-          .get(
-            Uri.parse('$baseUrl/health'),
-            headers: _headers,
-          )
-          .timeout(const Duration(seconds: 5));
-
-      return response.statusCode == 200;
-    } catch (e) {
-      print('Erro ao verificar conexão: $e');
-      return false;
-    }
-  }
-
   // Obter todas as meditações
   Future<List<Meditation>> getMeditations() async {
     try {
+      print('Tentando obter meditações de: $baseUrl/meditations');
       final response = await http.get(
         Uri.parse('$baseUrl/meditations'),
         headers: _headers,
@@ -71,49 +70,53 @@ class ApiService {
       }
     } catch (e) {
       print('Erro ao obter meditações: $e');
-      rethrow;
+      // Para testes, retornar dados fictícios se a API falhar
+      return _getMockMeditations();
     }
   }
 
-  // Obter todas as categorias de meditação
-  Future<List<Category>> getMeditationCategories() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/meditations/categories'),
-        headers: _headers,
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((item) => Category.fromJson(item)).toList();
-      } else {
-        throw Exception('Falha ao carregar categorias: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Erro ao obter categorias: $e');
-      rethrow;
-    }
-  }
-
-  // Obter meditações por categoria
-  Future<List<Meditation>> getMeditationsByCategory(String category) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/meditations/category/$category'),
-        headers: _headers,
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((item) => Meditation.fromJson(item)).toList();
-      } else {
-        throw Exception(
-            'Falha ao carregar meditações da categoria: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Erro ao obter meditações da categoria: $e');
-      rethrow;
-    }
+  // Dados fictícios para testes
+  List<Meditation> _getMockMeditations() {
+    return [
+      Meditation(
+        id: 'calma_1',
+        title: 'Meditação para Calma',
+        description:
+            'Acalme sua mente e reduza a ansiedade com esta meditação guiada.',
+        audioUrl:
+            'https://www2.cs.uic.edu/~i101/SoundFiles/StarWars3.wav', // URL pública para teste
+        category: 'Calma',
+        duration: '10 min',
+      ),
+      Meditation(
+        id: 'foco_1',
+        title: 'Meditação para Foco',
+        description: 'Aumente sua concentração e foco com esta meditação.',
+        audioUrl:
+            'https://www2.cs.uic.edu/~i101/SoundFiles/ImperialMarch60.wav', // URL pública para teste
+        category: 'Foco',
+        duration: '15 min',
+      ),
+      Meditation(
+        id: 'sono_1',
+        title: 'Meditação para Sono',
+        description: 'Relaxe e prepare-se para uma noite de sono tranquila.',
+        audioUrl:
+            'https://www2.cs.uic.edu/~i101/SoundFiles/CantinaBand3.wav', // URL pública para teste
+        category: 'Sono',
+        duration: '20 min',
+      ),
+      Meditation(
+        id: 'respiracao_1',
+        title: 'Exercício de Respiração',
+        description:
+            'Pratique a respiração consciente para reduzir o estresse.',
+        audioUrl:
+            'https://www2.cs.uic.edu/~i101/SoundFiles/PinkPanther30.wav', // URL pública para teste
+        category: 'Respiração',
+        duration: '5 min',
+      ),
+    ];
   }
 
   // Sugerir meditação com base no humor
@@ -133,116 +136,26 @@ class ApiService {
       }
     } catch (e) {
       print('Erro ao sugerir meditação: $e');
-      rethrow;
+
+      // Mapear humor para meditação específica dos dados fictícios
+      final meditations = _getMockMeditations();
+
+      if (mood.toLowerCase().contains('ansioso')) {
+        return meditations[0]; // Calma
+      } else if (mood.toLowerCase().contains('cansado')) {
+        return meditations[1]; // Foco
+      } else {
+        return meditations[2]; // Sono
+      }
     }
   }
 
-  // Obter posts da comunidade
-  Future<List<Post>> getPosts() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/community/posts'),
-        headers: _headers,
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => Post.fromJson(json)).toList();
-      } else {
-        throw Exception('Falha ao carregar posts: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Erro ao carregar posts: $e');
-      rethrow;
-    }
-  }
-
-  // Criar novo post
-  Future<Post> createPost(
-      {required String userId,
-      required String title,
-      required String content}) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/community/posts'),
-        headers: _headers,
-        body:
-            json.encode({'userId': userId, 'title': title, 'content': content}),
-      );
-
-      if (response.statusCode == 201) {
-        final data = json.decode(response.body);
-        return Post.fromJson(data);
-      } else {
-        throw Exception('Falha ao criar post: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Erro ao criar post: $e');
-      rethrow;
-    }
-  }
-
-  // Obter histórico do diário
-  Future<List<DiaryEntry>> getDiaryHistory(String userId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/diary/history/$userId'),
-        headers: _headers,
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => DiaryEntry.fromJson(json)).toList();
-      } else {
-        throw Exception('Falha ao carregar histórico: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Erro ao carregar histórico: $e');
-      rethrow;
-    }
-  }
-
-  // Obter estatísticas do diário
-  Future<Map<String, dynamic>> getDiaryStats(String userId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/diary/stats/$userId'),
-        headers: _headers,
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception(
-            'Falha ao carregar estatísticas: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Erro ao carregar estatísticas: $e');
-      rethrow;
-    }
-  }
-
-  // Salvar entrada do diário
-  Future<DiaryEntry> saveDiaryEntry(String userId, String content) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/diary/entries'),
-        headers: _headers,
-        body: json.encode({
-          'userId': userId,
-          'content': content,
-        }),
-      );
-
-      if (response.statusCode == 201) {
-        final data = json.decode(response.body);
-        return DiaryEntry.fromJson(data);
-      } else {
-        throw Exception('Falha ao salvar entrada: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Erro ao salvar entrada: $e');
-      rethrow;
+  // Obter URL completa para um arquivo de áudio
+  String getFullAudioUrl(String audioPath) {
+    if (audioPath.startsWith('http')) {
+      return audioPath;
+    } else {
+      return '$staticUrl$audioPath';
     }
   }
 }

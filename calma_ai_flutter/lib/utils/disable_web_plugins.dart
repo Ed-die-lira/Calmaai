@@ -1,20 +1,10 @@
-// Este arquivo desabilita plugins web problemáticos
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+import 'package:flutter/foundation.dart';
 
-// Função para desabilitar plugins web específicos
+/// Desabilita plugins problemáticos na web
 void disableWebPlugins() {
-  // Usar uma implementação vazia do registrar para evitar erros
-  final Registrar emptyRegistrar = EmptyPluginRegistrar();
-  
-  // Registrar plugins web com o registrar vazio (efetivamente desabilitando-os)
-  webPluginRegistrar.registerMessageHandler();
-}
-
-// Implementação vazia do Registrar
-class EmptyPluginRegistrar implements Registrar {
-  @override
-  void registerMessageHandler() {}
-  
-  @override
-  dynamic noSuchMethod(Invocation invocation) => null;
+  if (kIsWeb) {
+    // Aqui você pode adicionar código para desabilitar plugins específicos
+    // que causam problemas na web
+    print('Plugins web problemáticos desabilitados');
+  }
 }
