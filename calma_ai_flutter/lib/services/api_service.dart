@@ -9,12 +9,20 @@ import '../models/meditation.dart';
 
 class ApiService {
   final String? token;
+  bool _useFallbackUrls = false;
 
   // URL base da API
   String get baseUrl {
-    if (kIsWeb) {
-      // Para web, usar localhost ou a URL de produção
+    if (_useFallbackUrls) {
+      // Usar URL alternativa se a principal falhar
       return 'https://calmaai.onrender.com/api';
+    }
+
+    if (kIsWeb) {
+      // Para web, tentar localhost primeiro (para desenvolvimento local)
+      return kReleaseMode
+          ? 'https://calmaai.onrender.com/api'
+          : 'http://localhost:3000/api';
     } else if (kReleaseMode) {
       // Para release em dispositivos móveis
       return 'https://calmaai.onrender.com/api';
@@ -26,9 +34,16 @@ class ApiService {
 
   // URL para arquivos estáticos
   String get staticUrl {
-    if (kIsWeb) {
-      // Para web, usar localhost ou a URL de produção
+    if (_useFallbackUrls) {
+      // Usar URL alternativa se a principal falhar
       return 'https://calmaai.onrender.com';
+    }
+
+    if (kIsWeb) {
+      // Para web, tentar localhost primeiro (para desenvolvimento local)
+      return kReleaseMode
+          ? 'https://calmaai.onrender.com'
+          : 'http://localhost:3000';
     } else if (kReleaseMode) {
       // Para release em dispositivos móveis
       return 'https://calmaai.onrender.com';
@@ -44,6 +59,7 @@ class ApiService {
   Map<String, String> get _headers {
     final headers = {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
 
     if (token != null) {
@@ -66,11 +82,21 @@ class ApiService {
         final List<dynamic> data = json.decode(response.body);
         return data.map((item) => Meditation.fromJson(item)).toList();
       } else {
+        print('Erro HTTP: ${response.statusCode}');
         throw Exception('Falha ao carregar meditações: ${response.statusCode}');
       }
     } catch (e) {
       print('Erro ao obter meditações: $e');
-      // Para testes, retornar dados fictícios se a API falhar
+
+      // Se for a primeira tentativa, tentar com URL alternativa
+      if (!_useFallbackUrls) {
+        _useFallbackUrls = true;
+        print('Tentando novamente com URL alternativa: $baseUrl/meditations');
+        return getMeditations();
+      }
+
+      // Se ainda falhar, usar dados fictícios
+      print('Usando dados fictícios após falha na comunicação');
       return _getMockMeditations();
     }
   }
@@ -122,6 +148,7 @@ class ApiService {
   // Sugerir meditação com base no humor
   Future<Meditation> suggestMeditation(String mood) async {
     try {
+      print('Tentando sugerir meditação para humor: $mood');
       final response = await http.post(
         Uri.parse('$baseUrl/meditations/suggest'),
         headers: _headers,
@@ -136,6 +163,13 @@ class ApiService {
       }
     } catch (e) {
       print('Erro ao sugerir meditação: $e');
+
+      // Se for a primeira tentativa, tentar com URL alternativa
+      if (!_useFallbackUrls) {
+        _useFallbackUrls = true;
+        print('Tentando novamente com URL alternativa');
+        return suggestMeditation(mood);
+      }
 
       // Mapear humor para meditação específica dos dados fictícios
       final meditations = _getMockMeditations();
@@ -156,6 +190,65 @@ class ApiService {
       return audioPath;
     } else {
       return '$staticUrl$audioPath';
+    }
+  }
+
+  // Método para testar a conexão com o backend
+  Future<bool> testConnection() async {
+    try {
+      print('Testando conexão com: $baseUrl');
+      final response = await http.get(
+        Uri.parse('$baseUrl'),
+        headers: _headers,
+      );
+
+      print('Resposta do teste de conexão: ${response.statusCode}');
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (e) {
+      print('Erro no teste de conexão: $e');
+
+      // Se for a primeira tentativa, tentar com URL alternativa
+      if (!_useFallbackUrls) {
+        _useFallbackUrls = true;
+        print('Tentando novamente com URL alternativa');
+        return testConnection();
+      }
+
+      return false;
+    }
+  }
+
+  // Método para testar especificamente o CORS
+  Future<Map<String, dynamic>> testCors() async {
+    try {
+      print('Testando CORS com: $baseUrl/meditations/cors-test');
+      final response = await http.get(
+        Uri.parse('$baseUrl/meditations/cors-test'),
+        headers: _headers,
+      );
+
+      print('Resposta do teste CORS: ${response.statusCode}');
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Falha no teste CORS: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Erro no teste CORS: $e');
+
+      // Se for a primeira tentativa, tentar com URL alternativa
+      if (!_useFallbackUrls) {
+        _useFallbackUrls = true;
+        print('Tentando novamente com URL alternativa');
+        return testCors();
+      }
+
+      return {
+        'success': false,
+        'error': e.toString(),
+        'message':
+            'Falha no teste CORS. Verifique se o servidor está configurado corretamente.'
+      };
     }
   }
 }

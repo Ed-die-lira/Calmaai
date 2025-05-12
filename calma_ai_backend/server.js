@@ -6,53 +6,35 @@
 // Importações de pacotes
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 
-// Carrega .env apenas se existir (opcional para Render)
-let result;
-try {
-  result = dotenv.config({ path: '.env' });
-} catch (error) {
-  console.warn('Aviso: Erro ao carregar arquivo .env:', error.message);
-  result = { error: true };
-}
+// Middleware personalizado para CORS
+const corsMiddleware = require('./utils/cors_middleware');
 
-// Importar middleware de autenticação
-const { verifyToken, verifyFirebaseToken } = require('./utils/auth');
-
-// Verificar se houve erro ao carregar o .env
-if (result && result.error && !process.env.PORT) {
-  console.warn('Aviso: Arquivo .env não encontrado ou com problemas. Usando variáveis de ambiente do sistema.');
-}
-
-console.log('Variáveis de ambiente carregadas:', {
-  PORT: process.env.PORT,
-  MONGODB_URI: process.env.MONGODB_URI ? 'Definido' : 'Não definido',
-  FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || 'Não definido',
-  JWT_SECRET: process.env.JWT_SECRET ? 'Definido' : 'Não definido',
-});
-
-// Importações de rotas
+// Rotas
 const meditationRoutes = require('./routes/meditation_routes');
 const diaryRoutes = require('./routes/diary_routes');
 const communityRoutes = require('./routes/community_routes');
 
-// Inicializa o app Express
+// Middleware de autenticação
+const { verifyToken } = require('./utils/auth');
+
+// Carregar variáveis de ambiente
+dotenv.config();
+
+// Inicializar Express
 const app = express();
 const PORT = process.env.PORT || 3000;
+const mongoUri = process.env.MONGODB_URI;
 
-// Middlewares
-app.use(cors());
+// Aplicar middleware CORS personalizado
+app.use(corsMiddleware);
+
+// Outros middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Servir arquivos estáticos (áudios)
-app.use('/static', express.static('static'));
-
-// Construir a string de conexão do MongoDB
-const mongoUri = process.env.MONGODB_URI ||
-  `mongodb+srv://${process.env.MONGODB_USER}:${encodeURIComponent(process.env.MONGODB_PASSWORD)}@${process.env.MONGODB_CLUSTER}/${process.env.MONGODB_DATABASE}?retryWrites=true&w=majority`;
+app.use('/static', express.static(path.join(__dirname, 'public')));
 
 // Conexão com MongoDB
 mongoose.connect(mongoUri)

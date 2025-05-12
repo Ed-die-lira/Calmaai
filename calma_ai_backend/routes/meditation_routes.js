@@ -181,5 +181,21 @@ router.post('/suggest', async (req, res) => {
   }
 });
 
+/**
+ * @route GET /api/meditations/cors-test
+ * @desc Testa se o CORS está configurado corretamente
+ * @access Public
+ */
+router.get('/cors-test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'CORS está configurado corretamente!',
+    headers: {
+      'origin': req.headers.origin || 'Não disponível',
+      'user-agent': req.headers['user-agent'] || 'Não disponível'
+    }
+  });
+});
+
 module.exports = router;
 
