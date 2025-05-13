@@ -19,11 +19,12 @@ class MeditationScreen extends StatefulWidget {
 }
 
 class _MeditationScreenState extends State<MeditationScreen> {
+  bool _isLoading = true;
+  String? _errorMessage;
   List<Meditation> _meditations = [];
   Meditation? _currentMeditation;
-  bool _isLoading = true;
+  bool _isPlaying = false;
   ApiService? _apiService;
-  String _errorMessage = '';
 
   @override
   void initState() {
@@ -35,7 +36,7 @@ class _MeditationScreenState extends State<MeditationScreen> {
   Future<void> _loadMeditations() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = '';
+      _errorMessage = null;
     });
 
     try {
@@ -68,29 +69,17 @@ class _MeditationScreenState extends State<MeditationScreen> {
     }
   }
 
-  // Sugerir meditação com base no humor
-  Future<void> _suggestMeditation(String mood) async {
-    try {
-      if (_apiService == null) {
-        return;
-      }
+  void _togglePlayPause() {
+    setState(() {
+      _isPlaying = !_isPlaying;
+    });
+  }
 
-      setState(() {
-        _isLoading = true;
-      });
-
-      final suggestion = await _apiService!.suggestMeditation(mood);
-
-      setState(() {
-        _currentMeditation = suggestion;
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('Erro ao sugerir meditação: $e');
-      setState(() {
-        _isLoading = false;
-      });
-    }
+  void _selectMeditation(Meditation meditation) {
+    setState(() {
+      _currentMeditation = meditation;
+      _isPlaying = false;
+    });
   }
 
   @override
@@ -98,132 +87,74 @@ class _MeditationScreenState extends State<MeditationScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Meditações'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadMeditations,
-            tooltip: 'Recarregar',
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _errorMessage.isNotEmpty
-              ? _buildErrorWidget()
-              : _buildMeditationContent(),
-    );
-  }
+          : _errorMessage != null
+              ? Center(child: Text(_errorMessage!))
+              : Column(
+                  children: [
+                    // Player de meditação atual
+                    if (_currentMeditation != null)
+                      Card(
+                        margin: const EdgeInsets.all(16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            children: [
+                              Text(
+                                _currentMeditation!.title,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(_currentMeditation!.description),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(_isPlaying
+                                        ? Icons.pause_circle_filled
+                                        : Icons.play_circle_filled),
+                                    iconSize: 48,
+                                    onPressed: _togglePlayPause,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Duração: ${_currentMeditation!.duration ~/ 60} minutos',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    // Lista de meditações disponíveis
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: _meditations.length,
+                        itemBuilder: (context, index) {
+                          final meditation = _meditations[index];
+                          final isSelected =
+                              _currentMeditation?.id == meditation.id;
 
-  Widget _buildErrorWidget() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 48, color: Colors.red),
-          const SizedBox(height: 16),
-          Text(
-            _errorMessage,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.red),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _loadMeditations,
-            child: const Text('Tentar novamente'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMeditationContent() {
-    return Column(
-      children: [
-        // Área de seleção de humor
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Como você está se sentindo hoje?',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildMoodButton(
-                      'Ansioso', Icons.sentiment_dissatisfied, Colors.orange),
-                  _buildMoodButton(
-                      'Cansado', Icons.sentiment_neutral, Colors.blue),
-                  _buildMoodButton(
-                      'Feliz', Icons.sentiment_satisfied, Colors.green),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        // Área do player de áudio
-        if (_currentMeditation != null)
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: AudioPlayerWidget(
-              audioUrl:
-                  _apiService!.getFullAudioUrl(_currentMeditation!.audioUrl),
-              title: _currentMeditation!.title,
-              description: _currentMeditation!.description,
-            ),
-          ),
-
-        // Lista de meditações disponíveis
-        Expanded(
-          child: ListView.builder(
-            itemCount: _meditations.length,
-            itemBuilder: (context, index) {
-              final meditation = _meditations[index];
-              final isSelected = _currentMeditation?.id == meditation.id;
-
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                color: isSelected ? Colors.blue.shade50 : null,
-                child: ListTile(
-                  title: Text(meditation.title),
-                  subtitle: Text(
-                    '${meditation.category} • ${meditation.duration}',
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
-                  trailing: Icon(
-                    isSelected
-                        ? Icons.play_circle_filled
-                        : Icons.play_circle_outline,
-                    color: isSelected ? Colors.blue : Colors.grey,
-                  ),
-                  onTap: () {
-                    setState(() {
-                      _currentMeditation = meditation;
-                    });
-                  },
+                          return ListTile(
+                            title: Text(meditation.title),
+                            subtitle: Text(
+                              '${meditation.category} - ${meditation.duration ~/ 60} min',
+                            ),
+                            leading: const Icon(Icons.music_note),
+                            selected: isSelected,
+                            onTap: () => _selectMeditation(meditation),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMoodButton(String mood, IconData icon, Color color) {
-    return ElevatedButton.icon(
-      onPressed: () => _suggestMeditation(mood),
-      icon: Icon(icon, color: Colors.white),
-      label: Text(mood),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      ),
     );
   }
 }

@@ -34,7 +34,7 @@ app.use(corsMiddleware);
 // Outros middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/static', express.static(path.join(__dirname, 'public')));
+app.use('/static', express.static(path.join(__dirname, 'static')));
 
 // Conexão com MongoDB
 mongoose.connect(mongoUri)

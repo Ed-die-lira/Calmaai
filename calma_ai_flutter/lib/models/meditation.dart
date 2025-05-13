@@ -7,26 +7,26 @@ class Meditation {
   final String title;
   final String description;
   final String audioUrl;
+  final int duration; // em segundos
   final String category;
-  final String duration;
 
   Meditation({
     required this.id,
     required this.title,
     required this.description,
     required this.audioUrl,
-    required this.category,
     required this.duration,
+    required this.category,
   });
 
   factory Meditation.fromJson(Map<String, dynamic> json) {
     return Meditation(
-      id: json['id'] ?? '',
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      audioUrl: json['audioUrl'] ?? '',
-      category: json['category'] ?? '',
-      duration: json['duration'] ?? '',
+      id: json['id'],
+      title: json['title'],
+      description: json['description'],
+      audioUrl: json['audioUrl'],
+      duration: json['duration'],
+      category: json['category'],
     );
   }
 
@@ -36,8 +36,8 @@ class Meditation {
       'title': title,
       'description': description,
       'audioUrl': audioUrl,
-      'category': category,
       'duration': duration,
+      'category': category,
     };
   }
 }

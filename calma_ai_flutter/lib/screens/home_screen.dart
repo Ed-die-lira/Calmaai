@@ -1,100 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
-import 'meditation_screen.dart';
-import 'diary_screen.dart';
-import 'breathing_screen.dart';
-import 'community_screen.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({Key? key}) : super(key: key);
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({Key? key}) : super(key: key);
 
-  void _showLoginDialog(BuildContext context) {
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-    final authService = Provider.of<AuthService>(context, listen: false);
-    bool isLoading = false;
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
-    showDialog(
-      context: context,
-      barrierDismissible: false, // Impede fechar ao clicar fora
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Login'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                keyboardType: TextInputType.emailAddress,
-                enabled: !isLoading,
-              ),
-              TextField(
-                controller: passwordController,
-                decoration: const InputDecoration(labelText: 'Senha'),
-                obscureText: true,
-                enabled: !isLoading,
-              ),
-              if (isLoading)
-                const Padding(
-                  padding: EdgeInsets.only(top: 16.0),
-                  child: CircularProgressIndicator(),
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: isLoading
-                  ? null
-                  : () async {
-                      setState(() {
-                        isLoading = true;
-                      });
+class _HomeScreenState extends State<HomeScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
-                      // Adicionar um pequeno atraso para simular o processamento
-                      await Future.delayed(const Duration(seconds: 1));
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
-                      final success =
-                          await authService.loginWithEmailAndPassword(
-                        emailController.text,
-                        passwordController.text,
-                      );
+  Future<void> _login() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, preencha todos os campos')),
+      );
+      return;
+    }
 
-                      // Verificar se o widget ainda está montado
-                      if (!context.mounted) return;
+    setState(() {
+      _isLoading = true;
+    });
 
-                      if (success) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Login realizado com sucesso!'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      } else {
-                        setState(() {
-                          isLoading = false;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                                'Falha no login. Verifique suas credenciais.'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    },
-              child: const Text('Entrar'),
-            ),
-          ],
-        ),
-      ),
-    );
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final success = await authService.loginWithEmailAndPassword(
+        _emailController.text,
+        _passwordController.text,
+      );
+
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Falha no login. Verifique suas credenciais.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -120,7 +84,8 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildLoginContent(BuildContext context) {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -129,15 +94,30 @@ class HomePage extends StatelessWidget {
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Faça login para acessar recursos de bem-estar mental',
-            textAlign: TextAlign.center,
+          TextField(
+            controller: _emailController,
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.emailAddress,
           ),
-          const SizedBox(height: 30),
-          ElevatedButton(
-            onPressed: () => _showLoginDialog(context),
-            child: const Text('Entrar'),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _passwordController,
+            decoration: const InputDecoration(
+              labelText: 'Senha',
+              border: OutlineInputBorder(),
+            ),
+            obscureText: true,
           ),
+          const SizedBox(height: 20),
+          _isLoading
+              ? const CircularProgressIndicator()
+              : ElevatedButton(
+                  onPressed: _login,
+                  child: const Text('Entrar'),
+                ),
         ],
       ),
     );
@@ -146,109 +126,58 @@ class HomePage extends StatelessWidget {
   Widget _buildMainContent(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
             'Olá, ${authService.userEmail}!',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 24),
           ),
-        ),
-        Expanded(
-          child: GridView.count(
-            crossAxisCount: 2,
-            padding: const EdgeInsets.all(16.0),
-            children: [
-              _buildFeatureCard(
-                context,
-                'Meditações',
-                Icons.spa,
-                Colors.blue,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const MeditationScreen()),
-                  );
-                },
-              ),
-              _buildFeatureCard(
-                context,
-                'Diário Emocional',
-                Icons.book,
-                Colors.green,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const DiaryScreen()),
-                  );
-                },
-              ),
-              _buildFeatureCard(
-                context,
-                'Respiração',
-                Icons.air,
-                Colors.purple,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const BreathingScreen()),
-                  );
-                },
-              ),
-              _buildFeatureCard(
-                context,
-                'Comunidade',
-                Icons.people,
-                Colors.orange,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const CommunityScreen()),
-                  );
-                },
-              ),
-            ],
+          const SizedBox(height: 20),
+          const Text(
+            'Bem-vindo ao Calma AI',
+            style: TextStyle(fontSize: 18),
           ),
-        ),
-      ],
+          const SizedBox(height: 40),
+          _buildFeatureButton(
+            context,
+            'Meditação',
+            Icons.self_improvement,
+            '/meditation',
+          ),
+          _buildFeatureButton(
+            context,
+            'Diário',
+            Icons.book,
+            '/diary',
+          ),
+          _buildFeatureButton(
+            context,
+            'Respiração',
+            Icons.air,
+            '/breathing',
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildFeatureCard(
+  Widget _buildFeatureButton(
     BuildContext context,
     String title,
     IconData icon,
-    Color color,
-    VoidCallback onTap,
+    String route,
   ) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 48, color: color),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: ElevatedButton.icon(
+        onPressed: () => Navigator.pushNamed(context, route),
+        icon: Icon(icon),
+        label: Text(title),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          minimumSize: const Size(200, 50),
         ),
       ),
     );

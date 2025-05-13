@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
@@ -11,9 +10,8 @@ import 'screens/settings_screen.dart';
 import 'screens/diagnostic_screen.dart';
 import 'services/auth_service.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -28,36 +26,18 @@ class MyApp extends StatelessWidget {
       ],
       child: Consumer<AuthService>(
         builder: (context, authService, _) {
+          // Verificar status de autenticação ao iniciar
+          Future.delayed(Duration.zero, () {
+            authService.checkAuthStatus();
+          });
+
           return MaterialApp(
             title: 'Calma AI',
             theme: ThemeData(
               primarySwatch: Colors.blue,
               visualDensity: VisualDensity.adaptivePlatformDensity,
-              scaffoldBackgroundColor: Colors.grey[100],
-              appBarTheme: const AppBarTheme(
-                elevation: 0,
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              elevatedButtonTheme: ElevatedButtonThemeData(
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.blue,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              cardTheme: CardTheme(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
             ),
-            initialRoute: authService.isAuthenticated ? '/' : '/login',
+            initialRoute: '/',
             routes: {
               '/': (context) => const HomeScreen(),
               '/login': (context) => const LoginScreen(),
