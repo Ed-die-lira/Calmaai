@@ -21,12 +21,12 @@ class Meditation {
 
   factory Meditation.fromJson(Map<String, dynamic> json) {
     return Meditation(
-      id: json['id'],
-      title: json['title'],
-      description: json['description'],
-      audioUrl: json['audioUrl'],
-      duration: json['duration'],
-      category: json['category'],
+      id: json['id'] ?? '',
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      audioUrl: json['audioUrl'] ?? '',
+      duration: json['duration'] ?? 0,
+      category: json['category'] ?? '',
     );
   }
 

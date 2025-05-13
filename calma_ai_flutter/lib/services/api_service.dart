@@ -13,10 +13,51 @@ class ApiService {
       ? 'https://calmaai.onrender.com' // URL de produção
       : 'http://10.0.2.2:3000'; // URL para emulador Android (localhost do host)
 
+  // Token de autenticação (opcional)
+  final String? token;
+
+  // Construtor
+  ApiService({this.token});
+
+  // Headers para requisições autenticadas
+  Map<String, String> get _headers {
+    final headers = {'Content-Type': 'application/json'};
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
+  }
+
+  // Testar conexão com o servidor
+  Future<bool> testConnection() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/'));
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Erro ao testar conexão: $e');
+      return false;
+    }
+  }
+
+  // Testar CORS
+  Future<bool> testCors() async {
+    try {
+      final response =
+          await http.options(Uri.parse('$baseUrl/api/meditations'));
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (e) {
+      print('Erro ao testar CORS: $e');
+      return false;
+    }
+  }
+
   // Obter lista de meditações
   Future<List<Meditation>> getMeditations() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/api/meditations'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/meditations'),
+        headers: _headers,
+      );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -76,7 +117,7 @@ class ApiService {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/meditations/suggest'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _headers,
         body: json.encode({'mood': mood}),
       );
 
